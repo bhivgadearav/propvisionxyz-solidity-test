@@ -23,8 +23,7 @@ contract Token is IERC20, IMintableToken, IDividends {
     mapping(address => bool) public participant;
     mapping(address => uint256) public index;
     address[] public tokenHolders;
-    mapping(address account => mapping(address spender => uint256))
-        private allowances;
+    mapping(address => mapping(address => uint256)) private allowances;
     uint256 public dividends;
 
     // IERC20

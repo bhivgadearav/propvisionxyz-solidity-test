@@ -2,8 +2,6 @@ import web3Pkg from 'web3'
 const { utils } = web3Pkg
 import _ from 'lodash'
 import chai from 'chai'
-import chaiAsInit from 'chai-as-init'
-import chaiAsPromised from 'chai-as-promised'
 
 chai.use((_chai, utilsLib) => {
   const sanitizeResultVal = (result, val) => {
@@ -58,8 +56,15 @@ chai.use((_chai, utilsLib) => {
   })
 })
 
-chai.use(chaiAsInit)
-chai.use(chaiAsPromised)
 chai.should()
+
+export const expectRevert = async (promise) => {
+  try {
+    await promise;
+    chai.expect.fail('Expected revert not received');
+  } catch (error) {
+    chai.expect(error.message.toLowerCase()).to.include('revert');
+  }
+}
 
 export const getBalance = async addr => utils.toBN(await web3.eth.getBalance(addr))

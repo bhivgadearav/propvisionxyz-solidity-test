@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { getBalance } from './utils/index.js'
+import { getBalance, expectRevert } from './utils/index.js'
 
 const Token = artifacts.require("./Token")
 
@@ -24,43 +24,43 @@ contract('Token', accounts => {
   })
 
   it('has default values', async () => {
-    await token.name().should.eventually.eq('Test token')
-    await token.symbol().should.eventually.eq('TEST')
-    await token.decimals().should.eventually.eq('18')
-    await token.totalSupply().should.eventually.eq('0')
+    expect(await token.name()).to.eq('Test token')
+    expect(await token.symbol()).to.eq('TEST')
+    expect(await token.decimals()).to.eq('18')
+    expect(await token.totalSupply()).to.eq('0')
   })
 
   it('can be minted', async () => {
-    await token.mint().should.be.rejected
+    await expectRevert(token.mint())
 
     await token.mint({ value: 23 })
-    await token.balanceOf(accounts[0]).should.eventually.eq('23')
-    await token.totalSupply().should.eventually.eq('23')
+    expect(await token.balanceOf(accounts[0])).to.eq('23')
+    expect(await token.totalSupply()).to.eq('23')
 
     await token.mint({ value: 50 })
-    await token.balanceOf(accounts[0]).should.eventually.eq('73')
-    await token.totalSupply().should.eventually.eq('73')
+    expect(await token.balanceOf(accounts[0])).to.eq('73')
+    expect(await token.totalSupply()).to.eq('73')
 
-    await getBalance(token.address).should.eventually.eq('73')
+    expect(await getBalance(token.address)).to.eq('73')
 
     await token.mint({ value: 50, from: accounts[1] })
-    await token.balanceOf(accounts[0]).should.eventually.eq('73')
-    await token.balanceOf(accounts[1]).should.eventually.eq('50')
-    await token.totalSupply().should.eventually.eq('123')
+    expect(await token.balanceOf(accounts[0])).to.eq('73')
+    expect(await token.balanceOf(accounts[1])).to.eq('50')
+    expect(await token.totalSupply()).to.eq('123')
 
-    await getBalance(token.address).should.eventually.eq('123')
+    expect(await getBalance(token.address)).to.eq('123')
   })
 
   it('can be burnt', async () => {
     await token.mint({ value: '23' })
     await token.mint({ value: '50', from: accounts[1] })
 
-    await getBalance(token.address).should.eventually.eq('73')
+    expect(await getBalance(token.address)).to.eq('73')
 
     const preBal = await getBalance(accounts[9])
 
     await token.burn(accounts[9])
-    await getBalance(token.address).should.eventually.eq('50')
+    expect(await getBalance(token.address)).to.eq('50')
 
     const postBal = await getBalance(accounts[9])
 
@@ -75,41 +75,41 @@ contract('Token', accounts => {
 
     it('can be transferred directly', async () => {
       await token.transfer(accounts[2], 1, { from: accounts[1] })
-      await token.balanceOf(accounts[1]).should.eventually.eq('49')
-      await token.balanceOf(accounts[2]).should.eventually.eq('1')
-      await token.totalSupply().should.eventually.eq('100')
+      expect(await token.balanceOf(accounts[1])).to.eq('49')
+      expect(await token.balanceOf(accounts[2])).to.eq('1')
+      expect(await token.totalSupply()).to.eq('100')
 
-      await token.transfer(accounts[1], 2, { from: accounts[2] }).should.be.rejected
+      await expectRevert(token.transfer(accounts[1], 2, { from: accounts[2] }))
     })
 
     it('can be transferred indirectly', async () => {
       await token.approve(accounts[1], 5)
-      await token.allowance(accounts[0], accounts[1]).should.eventually.eq(5)
+      expect(await token.allowance(accounts[0], accounts[1])).to.eq(5)
 
       await token.approve(accounts[1], 10)
-      await token.allowance(accounts[0], accounts[1]).should.eventually.eq(10)
+      expect(await token.allowance(accounts[0], accounts[1])).to.eq(10)
 
-      await token.transferFrom(accounts[0], accounts[2], 11, { from: accounts[1] }).should.be.rejected
+      await expectRevert(token.transferFrom(accounts[0], accounts[2], 11, { from: accounts[1] }))
       await token.transferFrom(accounts[0], accounts[2], 9, { from: accounts[1] })
 
-      await token.balanceOf(accounts[0]).should.eventually.eq('41')
-      await token.balanceOf(accounts[1]).should.eventually.eq('50')
-      await token.balanceOf(accounts[2]).should.eventually.eq('9')
+      expect(await token.balanceOf(accounts[0])).to.eq('41')
+      expect(await token.balanceOf(accounts[1])).to.eq('50')
+      expect(await token.balanceOf(accounts[2])).to.eq('9')
 
-      await token.allowance(accounts[0], accounts[1]).should.eventually.eq(1)
-      await token.transferFrom(accounts[0], accounts[1], 2, { from: accounts[1] }).should.be.rejected
+      expect(await token.allowance(accounts[0], accounts[1])).to.eq(1)
+      await expectRevert(token.transferFrom(accounts[0], accounts[1], 2, { from: accounts[1] }))
       await token.transferFrom(accounts[0], accounts[1], 1, { from: accounts[1] })
 
-      await token.balanceOf(accounts[0]).should.eventually.eq('40')
-      await token.balanceOf(accounts[1]).should.eventually.eq('51')
-      await token.balanceOf(accounts[2]).should.eventually.eq('9')
+      expect(await token.balanceOf(accounts[0])).to.eq('40')
+      expect(await token.balanceOf(accounts[1])).to.eq('51')
+      expect(await token.balanceOf(accounts[2])).to.eq('9')
 
-      await token.allowance(accounts[0], accounts[1]).should.eventually.eq(0)
+      expect(await token.allowance(accounts[0], accounts[1])).to.eq(0)
     })
 
     describe('can record dividends', () => {
       it('and disallows empty dividend', async () => {
-        await token.recordDividend().should.be.rejected
+        await expectRevert(token.recordDividend())
       })
       
       it('and keeps track of holders when minting and burning', async () => {
@@ -118,17 +118,17 @@ contract('Token', accounts => {
         await token.mint({ value: 100, from: accounts[2] })
         await token.burn(accounts[9])
 
-        await token.balanceOf(accounts[0]).should.eventually.eq('0')
-        await token.balanceOf(accounts[1]).should.eventually.eq('50')
-        await token.balanceOf(accounts[2]).should.eventually.eq('100')
+        expect(await token.balanceOf(accounts[0])).to.eq('0')
+        expect(await token.balanceOf(accounts[1])).to.eq('50')
+        expect(await token.balanceOf(accounts[2])).to.eq('100')
 
         await assertHolderList(token, accounts[1], accounts[2])
 
         await token.recordDividend({ from: accounts[5], value: 1500 })
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(0)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(500)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(1000)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(0)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(500)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(1000)
 
         await assertHolderList(token, accounts[1], accounts[2])
       })
@@ -140,68 +140,68 @@ contract('Token', accounts => {
         await token.approve(accounts[0], 50, { from: accounts[1] })
         await token.transferFrom(accounts[1], accounts[2], 50)
 
-        await token.balanceOf(accounts[0]).should.eventually.eq('25')
-        await token.balanceOf(accounts[1]).should.eventually.eq('0')
-        await token.balanceOf(accounts[2]).should.eventually.eq('75')
-        await token.balanceOf(accounts[3]).should.eventually.eq('0')
+        expect(await token.balanceOf(accounts[0])).to.eq('25')
+        expect(await token.balanceOf(accounts[1])).to.eq('0')
+        expect(await token.balanceOf(accounts[2])).to.eq('75')
+        expect(await token.balanceOf(accounts[3])).to.eq('0')
 
         await assertHolderList(token, accounts[0], accounts[2])
 
         await token.recordDividend({ from: accounts[5], value: 1000 })
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(0)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(750)
-        await token.getWithdrawableDividend(accounts[3]).should.eventually.eq(0)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(0)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(750)
+        expect(await token.getWithdrawableDividend(accounts[3])).to.eq(0)
       })
 
       it('and compounds the payouts', async () => {
         await token.transfer(accounts[2], 25)
 
-        await token.balanceOf(accounts[0]).should.eventually.eq('25')
-        await token.balanceOf(accounts[1]).should.eventually.eq('50')
-        await token.balanceOf(accounts[2]).should.eventually.eq('25')
+        expect(await token.balanceOf(accounts[0])).to.eq('25')
+        expect(await token.balanceOf(accounts[1])).to.eq('50')
+        expect(await token.balanceOf(accounts[2])).to.eq('25')
 
         await token.recordDividend({ from: accounts[5], value: 1000 })
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(500)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(500)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250)
 
         // do some transfer to update the proportional holdings
         await token.transfer(accounts[2], 25, { from: accounts[1] })
         await token.mint({ value: 75, from: accounts[1] })
         await token.burn(accounts[0], { from: accounts[0] })
 
-        await token.balanceOf(accounts[0]).should.eventually.eq('0')
-        await token.balanceOf(accounts[1]).should.eventually.eq('100')
-        await token.balanceOf(accounts[2]).should.eventually.eq('50')
-        await token.totalSupply().should.eventually.eq('150')
+        expect(await token.balanceOf(accounts[0])).to.eq('0')
+        expect(await token.balanceOf(accounts[1])).to.eq('100')
+        expect(await token.balanceOf(accounts[2])).to.eq('50')
+        expect(await token.totalSupply()).to.eq('150')
 
         await assertHolderList(token, accounts[1], accounts[2])
 
         await token.recordDividend({ from: accounts[5], value: 90 })
 
         // check that new payouts are in accordance with new holding proportions
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250 + 0)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(500 + 60)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250 + 30)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250 + 0)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(500 + 60)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250 + 30)
       })
 
       it('and allows for withdrawals in-between payouts', async () => {
         await token.transfer(accounts[2], 25)
 
-        await token.balanceOf(accounts[0]).should.eventually.eq('25')
-        await token.balanceOf(accounts[1]).should.eventually.eq('50')
-        await token.balanceOf(accounts[2]).should.eventually.eq('25')
+        expect(await token.balanceOf(accounts[0])).to.eq('25')
+        expect(await token.balanceOf(accounts[1])).to.eq('50')
+        expect(await token.balanceOf(accounts[2])).to.eq('25')
 
         await assertHolderList(token, accounts[0], accounts[1], accounts[2])
 
         await token.recordDividend({ from: accounts[5], value: 1000 })
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(500)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(500)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250)
 
         // check that withdrawal works!
         const preBal = await getBalance(accounts[9])
@@ -210,25 +210,25 @@ contract('Token', accounts => {
         expect(postBal.sub(preBal)).to.eq(500)
 
         // check that withdrawable balance has been reset for account 1
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(0)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(0)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250)
       })
 
       it('and allows for withdrawals even after holder relinquishes tokens', async () => {
         await token.transfer(accounts[2], 25)
 
-        await token.balanceOf(accounts[0]).should.eventually.eq('25')
-        await token.balanceOf(accounts[1]).should.eventually.eq('50')
-        await token.balanceOf(accounts[2]).should.eventually.eq('25')
+        expect(await token.balanceOf(accounts[0])).to.eq('25')
+        expect(await token.balanceOf(accounts[1])).to.eq('50')
+        expect(await token.balanceOf(accounts[2])).to.eq('25')
 
         await assertHolderList(token, accounts[0], accounts[1], accounts[2])
 
         await token.recordDividend({ from: accounts[5], value: 1000 })
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(500)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(500)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250)
 
         const preBal = await getBalance(accounts[9])
 
@@ -237,9 +237,9 @@ contract('Token', accounts => {
 
         await assertHolderList(token, accounts[0], accounts[2])
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(500)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(500)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250)
 
         // try withdrawing
         await token.withdrawDividend(accounts[9], { from: accounts[1] })
@@ -248,17 +248,17 @@ contract('Token', accounts => {
         const postBal = await getBalance(accounts[9])
         expect(postBal.sub(preBal)).to.eq(50 + 500)
 
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(0)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(0)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250)
 
         // record new dividend
         await token.recordDividend({ from: accounts[5], value: 80 })
 
         // this time accounts[1] doesn't get any payout because they no longer hold tokens
-        await token.getWithdrawableDividend(accounts[0]).should.eventually.eq(250 + 40)
-        await token.getWithdrawableDividend(accounts[1]).should.eventually.eq(0)
-        await token.getWithdrawableDividend(accounts[2]).should.eventually.eq(250 + 40)
+        expect(await token.getWithdrawableDividend(accounts[0])).to.eq(250 + 40)
+        expect(await token.getWithdrawableDividend(accounts[1])).to.eq(0)
+        expect(await token.getWithdrawableDividend(accounts[2])).to.eq(250 + 40)
       })
     })
   })
